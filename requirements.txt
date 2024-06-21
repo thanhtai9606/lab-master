@@ -1,6 +1,5 @@
-pip install pandas
-
-pip install pandas
+pandas
 numpy
 matplotlib
 openpyxl
+scikit-learn
