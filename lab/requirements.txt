@@ -5,3 +5,4 @@ numpy
 imblearn
 tensorflow-federated
 seaborn
+pyspark
