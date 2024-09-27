@@ -19,7 +19,29 @@ function getRandomEntryValue() {
     return values[Math.floor(Math.random() * values.length)];
 }
 
+function isWeekend() {
+    const today = new Date();
+    const day = today.getDay();
+    return day === 0 || day === 6;  // 0 là Chủ nhật, 6 là Thứ 7
+}
+
+function isWithinWorkingHours() {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const start = 9 * 60; // 9:00 AM in minutes
+    const end = 16 * 60 + 30; // 4:30 PM in minutes
+    const currentTimeInMinutes = hours * 60 + minutes;
+
+    return currentTimeInMinutes >= start && currentTimeInMinutes <= end;
+}
+
 function submitGoogleForm() {
+    if (isWeekend() || !isWithinWorkingHours()) {
+        console.log("Outside of working hours or it's a weekend. Skipping submission.");
+        return;
+    }
+
     const formUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSc5cvJIJN97c6Y_UfT0kitcI6KeNJNbF7JldVjuLF7oyRerog/formResponse';
 
     const formData = {
@@ -40,7 +62,7 @@ function submitGoogleForm() {
     console.log(formData);
 
     // Gọi hàm để gửi form
-   // PostFormData(formUrl, formData);
+    PostFormData(formUrl, formData);
 }
 
 function PostFormData(formUrl, formData) {
@@ -63,15 +85,33 @@ function PostFormData(formUrl, formData) {
     .catch(error => console.error('Error:', error));
 }
 
-function submitGoogleFormTest() {
-    const formUrl = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSc5cvJIJN97c6Y_UfT0kitcI6KeNJNbF7JldVjuLF7oyRerog/formResponse';
-    const formData = {
-        'entry.445127754': 'Chấp nhận mọi thử thách',
-        'entry.1374041517': 'Có'
-    };
+let submitCount = 0;
+const maxSubmissions = 21;
 
-    PostFormData(formUrl, formData);
+function startBackgroundSubmission() {
+    if (submitCount >= maxSubmissions) {
+        console.log("Reached maximum submissions for today.");
+        return;
+    }
+
+    const randomDelay = Math.random() * (60 * 60 * 1000); // Thời gian delay ngẫu nhiên trong khoảng 1 giờ (0 đến 60 phút)
+
+    setTimeout(() => {
+        submitGoogleForm();
+        submitCount++;
+        startBackgroundSubmission();
+    }, randomDelay);
 }
 
-// Gọi hàm để gửi form
-// submitGoogleForm();
+function startDailySubmission() {
+    if (!isWeekend()) {
+        submitCount = 0;  // Reset số lần gửi vào mỗi ngày mới
+        startBackgroundSubmission();  // Bắt đầu quy trình submit
+    }
+}
+
+// Thiết lập kiểm tra mỗi ngày vào lúc nửa đêm để bắt đầu lại quy trình submit
+setInterval(startDailySubmission, 24 * 60 * 60 * 1000); // Mỗi 24 giờ kiểm tra lại để bắt đầu
+
+// Bắt đầu lần đầu tiên
+startDailySubmission();
