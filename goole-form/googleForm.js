@@ -8,16 +8,22 @@ function generateRandomPhoneNumber() {
     const randomNumber = Math.floor(Math.random() * 100000000).toString().padStart(8, '0');
     return randomPrefix + randomNumber;
 }
+
 function getRandomRating() {
     const ratings = [8, 9, 10];
     return ratings[Math.floor(Math.random() * ratings.length)];
+}
+
+function getRandomEntryValue() {
+    const values = ['42151', '48759', '39935'];
+    return values[Math.floor(Math.random() * values.length)];
 }
 
 function submitGoogleForm() {
     const formUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSc5cvJIJN97c6Y_UfT0kitcI6KeNJNbF7JldVjuLF7oyRerog/formResponse';
 
     const formData = {
-        'entry.1582431947': '42151',
+        'entry.1582431947': getRandomEntryValue(),  // Chọn ngẫu nhiên một trong ba giá trị
         'entry.1591633300': generateRandomPhoneNumber(),  // Tạo số điện thoại ngẫu nhiên
         'entry.2029809369': '',
         'entry.2112121023': '5 (Rất Hài Lòng)',
@@ -27,14 +33,16 @@ function submitGoogleForm() {
             'Hình thức, tác phong của cán bộ'
         ].join(', '),  // Ghép các giá trị của entry.601701377 lại thành một chuỗi
         'entry.541726183': '7',
-        'entry.1798553241': getRandomRating(), // 8,9,10
+        'entry.1798553241': getRandomRating(),  // Random 8, 9 hoặc 10
         'dlut': getUnixTimestamp()  // Lấy Unix timestamp hiện tại
     };
 
-    console.log(formData)
+    console.log(formData);
 
-    //PostFormData(formUrl, formData);
+    // Gọi hàm để gửi form
+   // PostFormData(formUrl, formData);
 }
+
 function PostFormData(formUrl, formData) {
     const formBody = Object.keys(formData).map(key => encodeURIComponent(key) + '=' + encodeURIComponent(formData[key])).join('&');
 
@@ -45,15 +53,14 @@ function PostFormData(formUrl, formData) {
         },
         body: formBody
     })
-        .then(response => {
-            if (response.ok) {
-                console.log('Form submitted successfully!');
-            } else {
-                console.log('Error submitting form');
-            }
-        })
-        .catch(error => console.error('Error:', error));
-
+    .then(response => {
+        if (response.ok) {
+            console.log('Form submitted successfully!');
+        } else {
+            console.log('Error submitting form');
+        }
+    })
+    .catch(error => console.error('Error:', error));
 }
 
 function submitGoogleFormTest() {
