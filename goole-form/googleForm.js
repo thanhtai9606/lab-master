@@ -3,7 +3,7 @@ function getUnixTimestamp() {
 }
 
 function generateRandomPhoneNumber() {
-    const prefixes = ['09', '03'];
+    const prefixes = ['09', '08', '07', '03'];
     const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
     const randomNumber = Math.floor(Math.random() * 100000000).toString().padStart(8, '0');
     return randomPrefix + randomNumber;
@@ -33,19 +33,18 @@ function submitGoogleForm() {
 
     console.log(formData)
 
-   //PostFormData(formUrl, formData);
+    //PostFormData(formUrl, formData);
 }
-function PostFormData(formUrl, formData)
-{
+function PostFormData(formUrl, formData) {
     const formBody = Object.keys(formData).map(key => encodeURIComponent(key) + '=' + encodeURIComponent(formData[key])).join('&');
 
-        fetch(formUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: formBody
-        })
+    fetch(formUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formBody
+    })
         .then(response => {
             if (response.ok) {
                 console.log('Form submitted successfully!');
@@ -57,14 +56,14 @@ function PostFormData(formUrl, formData)
 
 }
 
-function submitGoogleFormTest(){
-        const formUrl = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSc5cvJIJN97c6Y_UfT0kitcI6KeNJNbF7JldVjuLF7oyRerog/formResponse';
-        const formData = {
-            'entry.445127754': 'Chấp nhận mọi thử thách',
-            'entry.1374041517': 'Có'
-        };
+function submitGoogleFormTest() {
+    const formUrl = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSc5cvJIJN97c6Y_UfT0kitcI6KeNJNbF7JldVjuLF7oyRerog/formResponse';
+    const formData = {
+        'entry.445127754': 'Chấp nhận mọi thử thách',
+        'entry.1374041517': 'Có'
+    };
 
-        PostFormData(formUrl, formData);
+    PostFormData(formUrl, formData);
 }
 
 // Gọi hàm để gửi form
