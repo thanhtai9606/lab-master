@@ -16,9 +16,9 @@ services:
     mysql:
         image: mariadb:latest
         environment:
-            MYSQL_ROOT_PASSWORD: 'admin'
-            MYSQL_USER: 'root'
-            MYSQL_PASSWORD: 'admin'
+            MYSQL_ROOT_PASSWORD: 'secret'
+            MYSQL_USER: 'tutorial'
+            MYSQL_PASSWORD: 'secret'
             MYSQL_DATABASE: 'tutorial'
         volumes:
             - mysqldata:/var/lib/mysql
