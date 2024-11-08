@@ -1,19 +1,20 @@
 from flask import Flask, request, jsonify
-from flask_restx import Api, Resource, fields
+from flask_restx import Api, Resource
 from models.isolation_forest import IsolationForestModel
 from models.vae import VAEModel
 from models.gan import GANModel
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix, classification_report, roc_auc_score
+import numpy as np
 
 app = Flask(__name__)
 api = Api(app, version='1.0', title='API Phát Hiện Bất Thường',
           description='API phát hiện bất thường sử dụng Isolation Forest, VAE, và GAN')
 
-# Khởi tạo namespace
 ns = api.namespace('anomaly_detection', description='Các API cho phát hiện bất thường')
 
+# Khởi tạo scaler và dictionary lưu trữ các mô hình
 scaler = StandardScaler()
 models = {
     "isolation_forest": IsolationForestModel(),
@@ -27,7 +28,7 @@ upload_parser.add_argument('model_type', type=str, required=True, help="Loại m
 upload_parser.add_argument('features', type=str, required=True, help="Danh sách các cột đặc trưng, phân cách bằng dấu phẩy")
 upload_parser.add_argument('file', type='file', location='files', required=True, help="Tệp CSV chứa dữ liệu")
 
-# Endpoint cho huấn luyện mô hình
+# Endpoint huấn luyện mô hình
 @ns.route('/train')
 class TrainModel(Resource):
     @api.expect(upload_parser)
@@ -46,8 +47,10 @@ class TrainModel(Resource):
 
         # Lọc dữ liệu và chuẩn hóa
         data = data[features]
-        scaled_features = scaler.fit_transform(data)
+        global scaler
+        scaled_features = scaler.fit_transform(data)  # Fit scaler cho dữ liệu huấn luyện
         
+        # Khởi tạo và huấn luyện mô hình
         if model_type == "vae":
             models["vae"] = VAEModel(input_dim=scaled_features.shape[1])
             models["vae"].train(scaled_features)
@@ -59,7 +62,7 @@ class TrainModel(Resource):
         
         return {"message": f"{model_type} model trained successfully"}
 
-# Endpoint cho dự đoán
+# Endpoint dự đoán
 @ns.route('/predict')
 class PredictModel(Resource):
     @api.expect(upload_parser)
@@ -76,9 +79,9 @@ class PredictModel(Resource):
             if feature not in data.columns:
                 return {"error": f"Cột '{feature}' không có trong dữ liệu."}, 400
 
-        # Lọc dữ liệu và chuẩn hóa
+        # Chuẩn hóa dữ liệu
         data = data[features]
-        scaled_features = scaler.transform(data)
+        scaled_features = scaler.transform(data)  # Sử dụng scaler đã fit trong /train
 
         model = models.get(model_type)
         if model is None:
@@ -131,13 +134,13 @@ class EvaluateModel(Resource):
             if feature not in data.columns:
                 return {"error": f"Cột '{feature}' không có trong dữ liệu."}, 400
 
-        # Lọc dữ liệu và chuẩn hóa
+        # Chuẩn hóa dữ liệu
         data = data[features]
         true_labels = data['target'].values if 'target' in data.columns else None
         if true_labels is None:
             return {"error": "Dữ liệu kiểm tra phải chứa cột 'target'."}, 400
 
-        scaled_features = scaler.transform(data)
+        scaled_features = scaler.transform(data)  # Sử dụng scaler đã fit trong /train
         model = models.get(model_type)
         if model is None:
             return {"error": f"{model_type} model chưa được huấn luyện."}, 400
