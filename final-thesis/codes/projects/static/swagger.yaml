@@ -17,11 +17,13 @@ paths:
               properties:
                 model_type:
                   type: string
-                  description: Type of model to train (isolation_forest, vae, gan)
+                  description: Type of model to train ( isolation_forest, vae, gan)
+                  example: "vae"
                 file:
                   type: string
                   format: binary
                   description: CSV file containing training data with a 'target' column
+                  example: "train_data.csv"
       responses:
         '200':
           description: Model training success message
@@ -45,11 +47,13 @@ paths:
               properties:
                 model_type:
                   type: string
-                  description: Type of model to use for prediction (isolation_forest, vae, gan)
+                  description: Type of model to use for prediction ( isolation_forest, vae, gan)
+                  example: "vae"
                 file:
                   type: string
                   format: binary
                   description: CSV file containing data to predict with a 'target' column
+                  example: "test_data.csv"
       responses:
         '200':
           description: Prediction results
@@ -78,3 +82,98 @@ paths:
                     type: object
                   roc_auc_score:
                     type: number
+
+  /status:
+    get:
+      summary: Check the status of a trained model
+      parameters:
+        - name: model_type
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Type of model to check status ( isolation_forest, vae, gan)
+            example: "vae"
+      responses:
+        '200':
+          description: Model status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "vae model is trained and ready to use."
+        '400':
+          description: Invalid model type
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid model type"
+
+  /list_models:
+    get:
+      summary: List all available models and their training status
+      responses:
+        '200':
+          description: Model status list
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                  example: "Trained and ready to use"
+
+  /evaluate:
+    post:
+      summary: Evaluate a trained model on test data
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                model_type:
+                  type: string
+                  description: Type of model to evaluate ( isolation_forest, vae, gan)
+                  example: "gan"
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file containing test data with a 'target' column
+                  example: "test_data.csv"
+      responses:
+        '200':
+          description: Evaluation results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  confusion_matrix:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        type: integer
+                  classification_report:
+                    type: object
+                  roc_auc_score:
+                    type: number
+        '400':
+          description: Error message if model is not trained
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "gan model has not been trained yet."

@@ -1,4 +1,4 @@
 flask
-flask-swagger-ui
+flask_restx
 pandas
 torch
