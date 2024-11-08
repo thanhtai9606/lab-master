@@ -1,0 +1,80 @@
+openapi: 3.0.0
+info:
+  title: Anomaly Detection API
+  version: "1.0"
+  description: API phát hiện bất thường sử dụng Isolation Forest, VAE, và GAN
+
+paths:
+  /train:
+    post:
+      summary: Train model for anomaly detection
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                model_type:
+                  type: string
+                  description: Type of model to train (isolation_forest, vae, gan)
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file containing training data with a 'target' column
+      responses:
+        '200':
+          description: Model training success message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /predict:
+    post:
+      summary: Predict anomalies using a trained model
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                model_type:
+                  type: string
+                  description: Type of model to use for prediction (isolation_forest, vae, gan)
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file containing data to predict with a 'target' column
+      responses:
+        '200':
+          description: Prediction results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  predictions:
+                    type: array
+                    items:
+                      type: integer
+                  anomaly_scores:
+                    type: array
+                    items:
+                      type: number
+                  threshold:
+                    type: number
+                  confusion_matrix:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        type: integer
+                  classification_report:
+                    type: object
+                  roc_auc_score:
+                    type: number
