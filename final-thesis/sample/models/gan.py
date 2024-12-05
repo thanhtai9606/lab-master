@@ -76,7 +76,7 @@ class GAN:
         threshold = np.percentile(test_probs, threshold_percentile)
         anomalies = (test_probs < threshold).astype(int)
         return test_probs, threshold, anomalies
-
+        
     def visualize(self, test_probs, threshold):
         plt.figure(figsize=(10, 6))
         plt.hist(test_probs, bins=50, alpha=0.75, label='GAN Probabilities')
