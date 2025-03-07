@@ -7,3 +7,7 @@ python3 audio_processing.py --method median    # Lọc nhiễu bằng Median Fil
     input_directory = "./data/wham/cv"  # Thay đổi nếu cần
     output_directory = "./data/wham_output/cv"  # Thay đổi nếu cần
 ```
+python3 audio_processing.py --noise spectral --silence vad
+python3 audio_processing.py --noise kalman --silence energy
+python3 audio_processing.py --noise spectral --silence none
+

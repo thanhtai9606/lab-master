@@ -5,3 +5,4 @@ webrtcvad
 pydub 
 soundfile 
 tqdm
+pykalman

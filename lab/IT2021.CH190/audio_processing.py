@@ -7,14 +7,15 @@ import webrtcvad
 import wave
 import scipy.signal as signal
 from tqdm import tqdm
+from pykalman import KalmanFilter
 
 # ===================== 1️⃣ Chuyển đổi âm thanh về PCM 16-bit Mono =====================
 def convert_audio_to_pcm16_mono(input_wav, output_wav, target_sr=16000):
     """
-    Chuyển đổi file âm thanh về PCM 16-bit mono.
+    Chuyển đổi file âm thanh về PCM 16-bit mono (bắt buộc cho WebRTC VAD).
     """
     y, sr = librosa.load(input_wav, sr=target_sr, mono=True)
-    sf.write(output_wav, y, target_sr, subtype='PCM_16')
+    sf.write(output_wav, y, target_sr, subtype='PCM_16')  # Đảm bảo PCM 16-bit
 
 # ===================== 2️⃣ Lọc Nhiễu bằng nhiều phương pháp =====================
 def spectral_subtraction(y, sr, noise_estimate=None, alpha=1.2):
@@ -46,6 +47,28 @@ def median_filter(y, sr, kernel_size=3):
     """
     return signal.medfilt(y, kernel_size)
 
+def adaptive_lms_filter(y, sr, mu=0.01):
+    """
+    Lọc nhiễu bằng thuật toán Least Mean Squares (LMS).
+    """
+    n = len(y)
+    d = np.copy(y)  
+    w = np.zeros(10)  
+    for i in range(10, n):
+        x = y[i-10:i]  
+        e = d[i] - np.dot(w, x)  
+        w += 2 * mu * e * x  
+        y[i] = e
+    return y
+
+def kalman_filter(y, sr):
+    """
+    Lọc nhiễu bằng Kalman Filter.
+    """
+    kf = KalmanFilter(initial_state_mean=0, n_dim_obs=1)
+    y_filtered, _ = kf.filter(y)
+    return y_filtered.flatten()
+
 def apply_noise_reduction(y, sr, method="spectral"):
     """
     Áp dụng phương pháp lọc nhiễu do người dùng chọn.
@@ -56,104 +79,67 @@ def apply_noise_reduction(y, sr, method="spectral"):
         return wiener_filter(y, sr)
     elif method == "median":
         return median_filter(y, sr)
+    elif method == "lms":
+        return adaptive_lms_filter(y, sr)
+    elif method == "kalman":
+        return kalman_filter(y, sr)
     else:
         print(f"❌ Lỗi: Phương pháp lọc nhiễu '{method}' không hợp lệ!")
         return y
 
-# ===================== 3️⃣ Loại Bỏ Khoảng Lặng bằng WebRTC VAD =====================
-def remove_silence(input_wav, output_wav, aggressiveness=3):
+# ===================== 3️⃣ Loại Bỏ Khoảng Lặng =====================
+def process_audio_folder(input_folder, output_folder, noise_method="spectral", remove_silence_flag=False):
     """
-    Loại bỏ khoảng lặng bằng WebRTC VAD.
-    """
-    vad = webrtcvad.Vad(aggressiveness)
-
-    with wave.open(input_wav, "rb") as wf:
-        sample_rate = wf.getframerate()
-        channels = wf.getnchannels()
-        width = wf.getsampwidth()
-
-        if channels != 1 or width != 2 or sample_rate not in [8000, 16000, 32000, 48000]:
-            print(f"❌ Lỗi: {input_wav} không phải PCM 16-bit mono!")
-            return
-
-        frames = wf.readframes(wf.getnframes())
-
-    frame_duration = 30  # 30ms mỗi frame
-    frame_size = int(sample_rate * frame_duration / 1000) * width
-    frames = [frames[i:i + frame_size] for i in range(0, len(frames), frame_size)]
-
-    if not frames or len(frames[0]) != frame_size:
-        print(f"❌ Lỗi: Frame không hợp lệ trong {input_wav}")
-        return
-
-    voiced_frames = []
-    for frame in frames:
-        if len(frame) == frame_size:
-            try:
-                if vad.is_speech(frame, sample_rate):
-                    voiced_frames.append(frame)
-            except Exception as e:
-                print(f"⚠️ Lỗi xử lý frame: {e}, bỏ qua frame này.")
-
-    if not voiced_frames:
-        print(f"⚠️ Cảnh báo: Không tìm thấy giọng nói trong {input_wav}, giữ nguyên file gốc.")
-        return
-
-    with wave.open(output_wav, "wb") as wf_out:
-        wf_out.setnchannels(1)
-        wf_out.setsampwidth(2)
-        wf_out.setframerate(sample_rate)
-        for frame in voiced_frames:
-            wf_out.writeframes(frame)
-
-# ===================== 4️⃣ Xử Lý Toàn Bộ File Trong Thư Mục =====================
-def process_audio_folder(input_folder, output_folder, method="spectral"):
-    """
-    Xử lý tất cả các file .wav trong thư mục bằng cách lọc nhiễu và loại bỏ khoảng lặng.
+    Xử lý tất cả các file .wav trong thư mục bằng cách lọc nhiễu (và loại bỏ khoảng lặng nếu bật tùy chọn).
+    
+    :param input_folder: Thư mục chứa file âm thanh đầu vào
+    :param output_folder: Thư mục chứa file đã xử lý
+    :param noise_method: Phương pháp lọc nhiễu (spectral, wiener, median, lms, kalman)
+    :param remove_silence_flag: True nếu muốn loại bỏ khoảng lặng, False nếu không
     """
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
     files = [f for f in os.listdir(input_folder) if f.endswith(".wav")]
 
-    for file in tqdm(files, desc=f"Processing files (Method: {method})"):
+    for file in tqdm(files, desc=f"Processing files (Noise: {noise_method})"):
         input_path = os.path.join(input_folder, file)
         converted_path = os.path.join(output_folder, "converted_" + file)
         denoised_path = os.path.join(output_folder, "denoised_" + file)
         final_output_path = os.path.join(output_folder, "cleaned_" + file)
 
+        # Kiểm tra nếu file rỗng hoặc có lỗi
+        if os.path.getsize(input_path) < 44:  # 44 bytes là kích thước tối thiểu của một file WAV hợp lệ
+            print(f"❌ Lỗi: File {file} có kích thước quá nhỏ hoặc không hợp lệ!")
+            continue
+
         # Chuyển đổi sang PCM 16-bit mono
         convert_audio_to_pcm16_mono(input_path, converted_path)
-
-        # Đọc file âm thanh sau khi chuyển đổi
         y, sr = librosa.load(converted_path, sr=None)
 
         # Lọc nhiễu theo phương pháp đã chọn
-        y_denoised = apply_noise_reduction(y, sr, method)
+        y_denoised = apply_noise_reduction(y, sr, noise_method)
         sf.write(denoised_path, y_denoised, sr)
 
-        # Loại bỏ khoảng lặng
-        remove_silence(denoised_path, final_output_path)
+        if remove_silence_flag:
+            remove_silence(denoised_path, final_output_path)
+        else:
+            os.rename(denoised_path, final_output_path)  # Nếu không bỏ khoảng lặng, giữ nguyên file
 
-        # Xóa file trung gian
         os.remove(converted_path)
-        os.remove(denoised_path)
 
     print(f"✅ Đã xử lý xong tất cả các file! Kết quả lưu tại: {output_folder}")
 
 # ===================== 5️⃣ Chạy chương trình =====================
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Lọc nhiễu và loại bỏ khoảng lặng cho file âm thanh.")
-    parser.add_argument("--method", type=str, default="spectral", choices=["spectral", "wiener", "median"],
-                        help="Phương pháp lọc nhiễu: spectral, wiener, median")
+    parser = argparse.ArgumentParser(description="Lọc nhiễu và loại bỏ khoảng lặng trong file âm thanh.")
+    parser.add_argument("--noise", type=str, default="spectral", choices=["spectral", "wiener", "median", "lms", "kalman"],
+                        help="Phương pháp lọc nhiễu: spectral, wiener, median, lms, kalman")
+    parser.add_argument("--silence", type=str, default="vad", choices=["vad", "energy", "none"],
+                        help="Phương pháp loại bỏ khoảng lặng: vad, energy, hoặc 'none' nếu không muốn bỏ khoảng lặng")
 
     args = parser.parse_args()
     
-    input_directory = "./data/wham/cv"  # Thay đổi nếu cần
-    output_directory = "./data/wham_output/cv"  # Thay đổi nếu cần
+    remove_silence_flag = args.silence != "none"  # Nếu chọn "none", không loại bỏ khoảng lặng
 
-    if not os.path.exists(input_directory):
-        print(f"❌ Thư mục {input_directory} không tồn tại. Hãy đặt các file .wav vào thư mục này!")
-        exit()
-
-    process_audio_folder(input_directory, output_directory, args.method)
+    process_audio_folder("./data/wham/cv", "./data/wham_output/cv", args.noise, remove_silence_flag)
