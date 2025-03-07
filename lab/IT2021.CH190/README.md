@@ -2,6 +2,10 @@ python3 audio_processing.py --method spectral  # Lọc nhiễu bằng Spectral S
 python3 audio_processing.py --method wiener    # Lọc nhiễu bằng Wiener Filter
 python3 audio_processing.py --method median    # Lọc nhiễu bằng Median Filter
 
+# Cài đặt sox để chuẩn hoá âm lượng
+```
+brew install sox
+
 ```
 # config
     input_directory = "./data/wham/cv"  # Thay đổi nếu cần

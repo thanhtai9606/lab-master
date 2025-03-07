@@ -8,6 +8,20 @@ import wave
 import scipy.signal as signal
 from tqdm import tqdm
 from pykalman import KalmanFilter
+import subprocess
+
+def normalize_volume(input_wav, output_wav, target_db=-3):
+    """
+    Chuẩn hóa mức âm lượng của file âm thanh bằng SoX.
+    :param input_wav: Đường dẫn file đầu vào
+    :param output_wav: Đường dẫn file đầu ra sau khi chuẩn hóa
+    :param target_db: Mức dB tối ưu (mặc định: -3dB)
+    """
+    try:
+        command = ["sox", input_wav, output_wav, "gain", "-n", str(target_db)]
+        subprocess.run(command, check=True)
+    except Exception as e:
+        print(f"❌ Lỗi khi chuẩn hóa âm lượng {input_wav}: {e}")
 
 # ===================== 1️⃣ Chuyển đổi âm thanh về PCM 16-bit Mono =====================
 def convert_audio_to_pcm16_mono(input_wav, output_wav, target_sr=16000):
@@ -90,12 +104,7 @@ def apply_noise_reduction(y, sr, method="spectral"):
 # ===================== 3️⃣ Loại Bỏ Khoảng Lặng =====================
 def process_audio_folder(input_folder, output_folder, noise_method="spectral", remove_silence_flag=False):
     """
-    Xử lý tất cả các file .wav trong thư mục bằng cách lọc nhiễu (và loại bỏ khoảng lặng nếu bật tùy chọn).
-    
-    :param input_folder: Thư mục chứa file âm thanh đầu vào
-    :param output_folder: Thư mục chứa file đã xử lý
-    :param noise_method: Phương pháp lọc nhiễu (spectral, wiener, median, lms, kalman)
-    :param remove_silence_flag: True nếu muốn loại bỏ khoảng lặng, False nếu không
+    Xử lý file âm thanh: Chuẩn hóa âm lượng, lọc nhiễu, (tùy chọn) loại bỏ khoảng lặng.
     """
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -104,31 +113,40 @@ def process_audio_folder(input_folder, output_folder, noise_method="spectral", r
 
     for file in tqdm(files, desc=f"Processing files (Noise: {noise_method})"):
         input_path = os.path.join(input_folder, file)
+        normalized_path = os.path.join(output_folder, "normalized_" + file)
         converted_path = os.path.join(output_folder, "converted_" + file)
         denoised_path = os.path.join(output_folder, "denoised_" + file)
         final_output_path = os.path.join(output_folder, "cleaned_" + file)
 
         # Kiểm tra nếu file rỗng hoặc có lỗi
-        if os.path.getsize(input_path) < 44:  # 44 bytes là kích thước tối thiểu của một file WAV hợp lệ
+        if os.path.getsize(input_path) < 44:
             print(f"❌ Lỗi: File {file} có kích thước quá nhỏ hoặc không hợp lệ!")
             continue
 
+        # Chuẩn hóa mức âm lượng bằng SoX
+        normalize_volume(input_path, normalized_path)
+
         # Chuyển đổi sang PCM 16-bit mono
-        convert_audio_to_pcm16_mono(input_path, converted_path)
+        convert_audio_to_pcm16_mono(normalized_path, converted_path)
+
+        # Đọc file âm thanh sau khi chuyển đổi
         y, sr = librosa.load(converted_path, sr=None)
 
         # Lọc nhiễu theo phương pháp đã chọn
         y_denoised = apply_noise_reduction(y, sr, noise_method)
         sf.write(denoised_path, y_denoised, sr)
 
+        # Bỏ khoảng lặng nếu được yêu cầu
         if remove_silence_flag:
             remove_silence(denoised_path, final_output_path)
         else:
-            os.rename(denoised_path, final_output_path)  # Nếu không bỏ khoảng lặng, giữ nguyên file
+            os.rename(denoised_path, final_output_path)  # Giữ nguyên file đã lọc nhiễu
 
+        os.remove(normalized_path)  # Xóa file trung gian
         os.remove(converted_path)
 
     print(f"✅ Đã xử lý xong tất cả các file! Kết quả lưu tại: {output_folder}")
+
 
 # ===================== 5️⃣ Chạy chương trình =====================
 if __name__ == "__main__":
