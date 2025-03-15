@@ -4,14 +4,13 @@ python3 audio_processing.py --method median    # Lọc nhiễu bằng Median Fil
 
 # Cài đặt sox để chuẩn hoá âm lượng
 ```
-brew install sox
-
+brew install ffmpeg sox
 ```
 # config
-    input_directory = "./data/wham/cv"  # Thay đổi nếu cần
-    output_directory = "./data/wham_output/cv"  # Thay đổi nếu cần
+    input_directory = "./data/fpt"  # Thay đổi nếu cần
+    output_directory = "./data/fpt_output"  # Thay đổi nếu cần
 
-    brew install ffmpeg sox
+    
 ```
 python3 audio_processing.py --noise spectral --silence vad
 python3 audio_processing.py --noise kalman --silence energy
