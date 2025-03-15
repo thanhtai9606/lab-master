@@ -47,11 +47,30 @@ def spectral_subtraction(y, sr, noise_estimate=None, alpha=1.2):
     D_denoised = magnitude_denoised * np.exp(1j * phase)
     return librosa.istft(D_denoised, hop_length=hop_length)
 
+import numpy as np
+import scipy.signal as signal
+
 def wiener_filter(y, sr):
     """
     Lọc nhiễu bằng bộ lọc Wiener.
     """
-    return signal.wiener(y)
+    if len(y) == 0:
+        print("❌ Lỗi: Dữ liệu âm thanh rỗng!")
+        return y
+
+    if np.any(np.isnan(y)) or np.any(np.isinf(y)):
+        print("❌ Lỗi: Dữ liệu chứa giá trị NaN hoặc Inf!")
+        return y
+
+    try:
+        print(f"🔄 Đang lọc nhiễu Wiener trên {len(y)} mẫu...")
+        y_filtered = signal.wiener(y, mysize=3)  # Giới hạn kích thước kernel để tăng tốc độ
+        print("✅ Lọc nhiễu Wiener thành công!")
+        return y_filtered
+    except Exception as e:
+        print(f"❌ Lỗi khi lọc nhiễu Wiener: {e}")
+        return y  # Trả về dữ liệu gốc nếu lỗi
+
 
 def median_filter(y, sr, kernel_size=3):
     """
