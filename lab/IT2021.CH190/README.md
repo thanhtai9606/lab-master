@@ -10,6 +10,8 @@ brew install sox
 # config
     input_directory = "./data/wham/cv"  # Thay đổi nếu cần
     output_directory = "./data/wham_output/cv"  # Thay đổi nếu cần
+
+    brew install ffmpeg sox
 ```
 python3 audio_processing.py --noise spectral --silence vad
 python3 audio_processing.py --noise kalman --silence energy
