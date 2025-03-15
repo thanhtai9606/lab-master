@@ -1,6 +1,3 @@
-python3 audio_processing.py --method spectral  # Lọc nhiễu bằng Spectral Subtraction
-python3 audio_processing.py --method wiener    # Lọc nhiễu bằng Wiener Filter
-python3 audio_processing.py --method median    # Lọc nhiễu bằng Median Filter
 
 # Cài đặt sox để chuẩn hoá âm lượng
 ```
@@ -14,5 +11,7 @@ brew install ffmpeg sox
 ```
 python3 audio_processing.py --noise spectral --silence vad
 python3 audio_processing.py --noise kalman --silence energy
+python3 audio_processing.py --noise wiener --silence energy
+python3 audio_processing.py --noise median --silence energy
 python3 audio_processing.py --noise spectral --silence none
 
