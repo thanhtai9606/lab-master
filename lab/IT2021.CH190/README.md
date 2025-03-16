@@ -15,3 +15,7 @@ python3 audio_processing.py --noise wiener --silence energy
 python3 audio_processing.py --noise median --silence energy
 python3 audio_processing.py --noise spectral --silence none
 
+
+python3 audio_processing.py --noise spectral,wiener,kalman --silence none
+
+

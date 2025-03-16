@@ -7,6 +7,28 @@ import scipy.signal as signal
 import subprocess
 from tqdm import tqdm
 from pykalman import KalmanFilter
+VALID_NOISE_METHODS = ["spectral", "wiener", "median", "lms", "kalman"]
+
+def apply_noise_reduction(y, sr, methods_str="spectral"):
+    methods = methods_str.split(",")
+    for method in methods:
+        method = method.strip().lower()
+        if method not in VALID_NOISE_METHODS:
+            print(f"⚠️ Bộ lọc không hợp lệ: {method} – Bỏ qua")
+            continue
+
+        print(f"🔧 Áp dụng bộ lọc: {method}")
+        if method == "spectral":
+            y = spectral_subtraction(y, sr)
+        elif method == "wiener":
+            y = wiener_filter(y, sr)
+        elif method == "median":
+            y = median_filter(y, sr)
+        elif method == "lms":
+            y = adaptive_lms_filter(y, sr)
+        elif method == "kalman":
+            y = kalman_filter(y, sr)
+    return y
 
 # ===================== 1️⃣ Chuyển đổi âm thanh =====================
 def convert_to_wav(input_audio, output_wav, target_sr=16000):
@@ -100,25 +122,26 @@ def kalman_filter(y, sr):
     y_filtered, _ = kf.filter(y)
     return y_filtered.flatten()
 
-def apply_noise_reduction(y, sr, method="spectral"):
-    """
-    Áp dụng phương pháp lọc nhiễu.
-    """
-    if method == "spectral":
-        return spectral_subtraction(y, sr)
-    elif method == "wiener":
-        return wiener_filter(y, sr)
-    elif method == "median":
-        return median_filter(y, sr)
-    elif method == "lms":
-        return adaptive_lms_filter(y, sr)
-    elif method == "kalman":
-        return kalman_filter(y, sr)
-    else:
-        print(f"❌ Lỗi: Phương pháp lọc nhiễu '{method}' không hợp lệ!")
-        return y
+def apply_noise_reduction(y, sr, methods_str="spectral"):
+    methods = methods_str.split(",")
+    for method in methods:
+        method = method.strip().lower()
+        if method not in VALID_NOISE_METHODS:
+            print(f"⚠️ Bộ lọc không hợp lệ: {method} – Bỏ qua")
+            continue
 
-# ===================== 3️⃣ Loại Bỏ Khoảng Lặng =====================
+        print(f"🔧 Áp dụng bộ lọc: {method}")
+        if method == "spectral":
+            y = spectral_subtraction(y, sr)
+        elif method == "wiener":
+            y = wiener_filter(y, sr)
+        elif method == "median":
+            y = median_filter(y, sr)
+        elif method == "lms":
+            y = adaptive_lms_filter(y, sr)
+        elif method == "kalman":
+            y = kalman_filter(y, sr)
+    return y# ===================== 3️⃣ Loại Bỏ Khoảng Lặng =====================
 def remove_silence(input_wav, output_wav):
     """
     Loại bỏ khoảng lặng bằng WebRTC VAD.
@@ -186,8 +209,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Lọc nhiễu và loại bỏ khoảng lặng cho file âm thanh.")
     
     # Thêm tham số noise với đầy đủ phương pháp, bao gồm "kalman"
-    parser.add_argument("--noise", type=str, default="spectral", choices=["spectral", "wiener", "median", "lms", "kalman"],
-                        help="Phương pháp lọc nhiễu: spectral, wiener, median, lms, kalman")
+    parser.add_argument("--noise", type=str, default="spectral",
+                    help="Danh sách phương pháp lọc nhiễu, cách nhau bởi dấu phẩy: spectral,wiener,median,lms,kalman")
 
     # Thêm tham số silence
     parser.add_argument("--silence", type=str, default="vad", choices=["vad", "energy", "none"],
