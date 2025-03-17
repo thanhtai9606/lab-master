@@ -151,16 +151,23 @@ def remove_silence(input_wav, output_wav):
         subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
         print(f"❌ Lỗi khi loại bỏ khoảng lặng {input_wav}: {e}")
-
+def remove_silence_energy(y, sr, threshold=0.02):
+    """
+    Loại bỏ khoảng lặng dựa trên ngưỡng năng lượng.
+    """
+    energy = np.abs(y)
+    silence_threshold = threshold * np.max(energy)
+    indices = np.where(energy > silence_threshold)[0]
+    return y[indices]
 # ===================== 4️⃣ Xử Lý Toàn Bộ File Âm Thanh =====================
-def process_audio_folder(input_folder, output_folder, noise_method="spectral", remove_silence_flag=False):
+def process_audio_folder(input_folder, output_folder, noise_method="spectral", remove_silence_flag=False, silence_method="vad"):
     """
     Xử lý tất cả các file âm thanh: Chuyển đổi, lọc nhiễu, loại bỏ khoảng lặng.
     """
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    files = [f for f in os.listdir(input_folder) if f.lower().endswith(("wav", "mp3", "flac", "ogg", "m4a"))]
+    files = sorted([f for f in os.listdir(input_folder) if f.lower().endswith(("wav", "mp3", "flac", "ogg", "m4a"))])
 
     for file in tqdm(files, desc=f"Processing files (Noise: {noise_method})"):
         input_path = os.path.join(input_folder, file)
@@ -189,7 +196,16 @@ def process_audio_folder(input_folder, output_folder, noise_method="spectral", r
 
         # Loại bỏ khoảng lặng (nếu có)
         if remove_silence_flag:
-            remove_silence(denoised_path, final_output_path)
+            if silence_method == "vad":
+                remove_silence(denoised_path, final_output_path)
+            elif silence_method == "energy":
+                y_denoised = remove_silence_energy(y_denoised, sr)
+                sf.write(final_output_path, y_denoised, sr)
+            elif silence_method == "both":
+                # Áp dụng cả hai phương pháp
+                y_denoised = remove_silence_energy(y_denoised, sr)
+                sf.write(denoised_path, y_denoised, sr)
+                remove_silence(denoised_path, final_output_path)
             os.remove(denoised_path)
         else:
             os.rename(denoised_path, final_output_path)
@@ -203,7 +219,6 @@ def process_audio_folder(input_folder, output_folder, noise_method="spectral", r
             os.remove(wav_path)  # Xóa file WAV trung gian nếu gốc không phải WAV
 
     print(f"✅ Xử lý hoàn tất! Kết quả lưu tại: {output_folder}")
-
 # ===================== 5️⃣ Chạy Chương Trình =====================
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Lọc nhiễu và loại bỏ khoảng lặng cho file âm thanh.")
@@ -213,14 +228,10 @@ if __name__ == "__main__":
                     help="Danh sách phương pháp lọc nhiễu, cách nhau bởi dấu phẩy: spectral,wiener,median,lms,kalman")
 
     # Thêm tham số silence
-    parser.add_argument("--silence", type=str, default="vad", choices=["vad", "energy", "none"],
-                        help="Phương pháp loại bỏ khoảng lặng: vad, energy, hoặc 'none' nếu không muốn bỏ khoảng lặng")
+    parser.add_argument("--silence", type=str, default="vad", choices=["vad", "energy", "both", "none"],
+                        help="Phương pháp loại bỏ khoảng lặng: vad, energy, both, hoặc 'none' nếu không muốn bỏ khoảng lặng")
 
     args = parser.parse_args()
     remove_silence_flag = args.silence != "none"
 
-    process_audio_folder("./data/fpt", "./data/fpt_output", args.noise, remove_silence_flag)
-
-
-    process_audio_folder("./data/fpt", "./data/fpt_output", args.noise, remove_silence_flag)
-
+    process_audio_folder("./data/fpt_noise", "./data/fpt_wiener", args.noise, remove_silence_flag, args.silence)
