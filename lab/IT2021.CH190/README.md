@@ -17,5 +17,15 @@ python3 audio_processing.py --noise spectral --silence none
 
 
 python3 audio_processing.py --noise spectral,wiener,kalman --silence none
+```
 
+# Setup phần Fine-tune
 
+Vào thư mục `./fine-tune`
+
+Cài đặt thư viện:
+```bash
+pip install -r requirements.txt
+```
+
+*Note: Trong lúc thử nghiệm, code được chạy trên Google Colab*
