@@ -6,3 +6,7 @@ lab/IT2021.CH190/data
 lab/.DS_Store
 .DS_Store
 final-thesis/gan/__pycache__
+lab/IT2021.CH190/ASR_FOSD_Experiment
+lab/IT2021.CH190/ASR_VinBigData_Experiment
+data/kaggle
+data/vae
